@@ -80,7 +80,7 @@ public class BorrowService {
     }
 
     public TicketResponse cancelTicket(TicketRequest ticketRequest) {
-        Ticket ticket = ticketRepository.findById(ticketRequest.getTicket_id())
+        Ticket ticket = ticketRepository.findById(ticketRequest.getTicketId())
                 .orElseThrow(() -> new BookNotFoundException("Ticket not found"));
 
         if (ticket.getTicketStatus() == TicketStatus.RETURNED ||
@@ -91,8 +91,7 @@ public class BorrowService {
             );
         }
 
-
-        ticket.setTicketStatus(ticketRequest.getTicket_status());
+        ticket.setTicketStatus(ticketRequest.getTicketStatus());
         Ticket updatedTicket = ticketRepository.save(ticket);
 
         log.info("Ticket with id {} has updated successfully",

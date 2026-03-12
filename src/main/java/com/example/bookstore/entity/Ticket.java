@@ -21,7 +21,7 @@ public class Ticket {
     private Borrower borrower;
 
     @ManyToOne
-    @JoinColumn(name = "book_id", nullable = false, unique = true)
+    @JoinColumn(name = "book_id", nullable = false)
     private Book book;
 
     @Column(name = "borrow_date")
@@ -32,7 +32,7 @@ public class Ticket {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private TicketStatus TicketStatus;
+    private TicketStatus ticketStatus;
 
 
 }

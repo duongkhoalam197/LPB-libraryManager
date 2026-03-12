@@ -5,12 +5,14 @@ import com.example.bookstore.dto.ManageBookRequest;
 import com.example.bookstore.dto.ManageBookResponse;
 import com.example.bookstore.entity.Book;
 import com.example.bookstore.entity.Category;
+import com.example.bookstore.enums.TicketStatus;
 import com.example.bookstore.exeption.BookDataException;
 import com.example.bookstore.exeption.BookNotFoundException;
 import com.example.bookstore.exeption.CategoryNotFoundException;
 import com.example.bookstore.exeption.ReferencedException;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.CategoryRepository;
+import com.example.bookstore.repository.TicketRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class BookService {
 
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
+    private final TicketRepository ticketRepository;
 
     private void validateImportRequest(ManageBookRequest request) {
         if (request.getTitle() == null || request.getTitle().isBlank()) {
@@ -155,7 +158,15 @@ public class BookService {
             Book book = bookRepository.findById(id)
                     .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
 
+            boolean isBorrowed = ticketRepository
+                    .existsByBookIdAndTicketStatus(id, TicketStatus.ACTIVE);
+
+            if (isBorrowed) {
+                throw new ReferencedException("Cannot delete book because it is currently borrowed");
+            }
+
             bookRepository.delete(book);
+
             return new ManageBookResponse(
                     "SUCCESS",
                     "Delete book successfully",
@@ -166,4 +177,5 @@ public class BookService {
             throw new ReferencedException("Cannot delete book because it is being referenced by other records");
         }
     }
+
 }

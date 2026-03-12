@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class TicketRequest {
-    private Long ticket_id;
-    private String reason;
-    private TicketStatus ticket_status;
+    private Long ticketId;
+    private TicketStatus ticketStatus;
 }
