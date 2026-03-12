@@ -5,12 +5,16 @@ import com.example.bookstore.dto.ManageBookRequest;
 import com.example.bookstore.dto.ManageBookResponse;
 import com.example.bookstore.entity.Book;
 import com.example.bookstore.entity.Category;
+import com.example.bookstore.exeption.BookDataException;
 import com.example.bookstore.exeption.BookNotFoundException;
 import com.example.bookstore.exeption.CategoryNotFoundException;
+import com.example.bookstore.exeption.ReferencedException;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.CategoryRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,103 +28,142 @@ public class BookService {
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
 
+    private void validateImportRequest(ManageBookRequest request) {
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Title is required");
+        }
+        if (request.getAuthor() == null || request.getAuthor().isBlank()) {
+            throw new IllegalArgumentException("Author is required");
+        }
+        if (request.getCategoryId() == null) {
+            throw new IllegalArgumentException("CategoryId is required");
+        }
+    }
+
+    @Transactional
     public ManageBookResponse importBook(ManageBookRequest request) {
         try {
-            if (request.getTitle() == null || request.getTitle().isBlank()) {
-                return new ManageBookResponse("FAILED", "Title is required", null);
-            }
-            if (request.getAuthor() == null || request.getAuthor().isBlank()) {
-                return new ManageBookResponse("FAILED", "Author is required", null);
-            }
-            if (request.getCategory_id() == null) {
-                return new ManageBookResponse("FAILED", "CategoryId is required", null);
-            }
-            Optional<Category> categoryOptional =
-                    categoryRepository.findById(request.getCategory_id());
-            if (categoryOptional.isEmpty()) {
-                return new ManageBookResponse("FAILED", "Category not found", null);
-            }
+            validateImportRequest(request);
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
 
-            Category category = categoryOptional.get();
             Book book = new Book();
             book.setAuthor(request.getAuthor());
             book.setTitle(request.getTitle());
             book.setPrice(request.getPrice());
             book.setCategory(category);
-
             Book savedBook = bookRepository.save(book);
-
             log.info("Import book successfully: {}", savedBook.getTitle());
-            return new ManageBookResponse(
-                    "SUCCESS",
-                    "Import book successfully",
-                    savedBook.getTitle()
-            );
+
+            return new ManageBookResponse("SUCCESS", "Import book successfully", savedBook.getTitle());
+
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when importing book", e);
+            throw new BookDataException("Cannot import book due to duplicate data or constraint violation");
+
+        } catch (CategoryNotFoundException e) {
+            throw e; //
+
         } catch (Exception e) {
-            log.error("Import book failed", e);
-            return new ManageBookResponse(
-                    "FAILED",
-                    e.getMessage(),
-                    null
-            );
+            log.error("Unexpected error when importing book", e);
+            throw new RuntimeException("Failed to import book: " + e.getMessage(), e);
         }
     }
 
     public List<BookResponse> listBook(Long categoryId) {
-        List<Book> books;
-        if (categoryId == null) {
-            books = bookRepository.findAll();
-        } else {
-            books = bookRepository.findByCategory_Id(categoryId);
+        try {
+            List<Book> books;
+            if (categoryId == null) {
+                books = bookRepository.findAll();
+            } else {
+                Category category = categoryRepository.findById(categoryId)
+                        .orElseThrow(() ->
+                                new CategoryNotFoundException("Category not found with id: " + categoryId));
+
+                books = bookRepository.findByCategoryId(category.getId());
+            }
+
+            return books.stream()
+                    .map(book -> {
+                        Category category = book.getCategory();
+                        return new BookResponse(
+                                book.getId(),
+                                book.getTitle(),
+                                book.getAuthor(),
+                                book.getPrice(),
+                                category != null ? category.getId() : null,
+                                category != null ? category.getName() : null
+                        );
+                    })
+                    .toList();
+        } catch (Exception e) {
+            log.error("Error while listing books with categoryId: {}", categoryId, e);
+            throw new RuntimeException("Failed to list books: " + e.getMessage(), e);
         }
-        return books.stream()
-                .map(book -> new BookResponse(
-                        book.getId(),
-                        book.getTitle(),
-                        book.getAuthor(),
-                        book.getPrice(),
-                        book.getCategory().getId(),
-                        book.getCategory().getName()
-                ))
-                .toList();
     }
 
-    public BookResponse getBookById(Long id) {
-        Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new BookNotFoundException("Book not found"));
+    private BookResponse mapToResponse(Book book) {
+        Category category = book.getCategory();
+
         return new BookResponse(
                 book.getId(),
                 book.getTitle(),
                 book.getAuthor(),
                 book.getPrice(),
-                book.getCategory().getId(),
-                book.getCategory().getName()
+                category != null ? category.getId() : null,
+                category != null ? category.getName() : null
         );
     }
 
-    public ManageBookResponse updateBook(Long id, ManageBookRequest request) {
+    public BookResponse getBookById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Book id must not be null");
+        }
         Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new BookNotFoundException("Book not found"));
-        Category category = categoryRepository.findById(request.getCategory_id())
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-
-        book.setTitle(request.getTitle());
-        book.setAuthor(request.getAuthor());
-        book.setPrice(request.getPrice());
-        book.setCategory(category);
-
-        Book updatedBook = bookRepository.save(book);
-        // Trả DTO
-        //Step: Tìm -> update giá trị -> ghi vào repo -> Từ bản ghi repo trả response/DTO
-        return new ManageBookResponse("SUCCESS",
-                "Update book successfully",
-                updatedBook.getTitle());
+                .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
+        return mapToResponse(book);
     }
 
-    public void deleteBook (Long id){
-        Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new BookNotFoundException("Book not found"));
-        bookRepository.delete(book);
+    @Transactional
+    public ManageBookResponse updateBook(Long id, ManageBookRequest request) {
+        try {
+            Book book = bookRepository.findById(id)
+                    .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
 
+            book.setTitle(request.getTitle());
+            book.setAuthor(request.getAuthor());
+            book.setPrice(request.getPrice());
+            book.setCategory(category);
+            Book updatedBook = bookRepository.save(book);
+
+            return new ManageBookResponse(
+                    "SUCCESS",
+                    "Update book successfully",
+                    updatedBook.getTitle()
+            );
+
+        } catch (DataIntegrityViolationException e) {
+            throw new BookDataException("Data constraint violation");
+        }
+    }
+
+    @Transactional
+    public ManageBookResponse deleteBook(Long id) {
+        try {
+            Book book = bookRepository.findById(id)
+                    .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
+
+            bookRepository.delete(book);
+            return new ManageBookResponse(
+                    "SUCCESS",
+                    "Delete book successfully",
+                    book.getTitle()
+            );
+
+        } catch (DataIntegrityViolationException e) {
+            throw new ReferencedException("Cannot delete book because it is being referenced by other records");
+        }
     }
 }

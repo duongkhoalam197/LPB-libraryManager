@@ -1,7 +1,7 @@
 package com.example.bookstore.service;
 
 import com.example.bookstore.dto.BorrowBookRequest;
-import com.example.bookstore.dto.ManageBookResponse;
+import com.example.bookstore.dto.TicketRequest;
 import com.example.bookstore.dto.TicketResponse;
 import com.example.bookstore.entity.Book;
 import com.example.bookstore.entity.Borrower;
@@ -79,6 +79,30 @@ public class BorrowService {
         }
     }
 
+    public TicketResponse cancelTicket(TicketRequest ticketRequest) {
+        Ticket ticket = ticketRepository.findById(ticketRequest.getTicket_id())
+                .orElseThrow(() -> new BookNotFoundException("Ticket not found"));
+
+        if (ticket.getTicketStatus() == TicketStatus.RETURNED ||
+                ticket.getTicketStatus() == TicketStatus.CANCELED) {
+            return new TicketResponse(
+                    "Invalid ticket status",
+                    "FAILED"
+            );
+        }
+
+
+        ticket.setTicketStatus(ticketRequest.getTicket_status());
+        Ticket updatedTicket = ticketRepository.save(ticket);
+
+        log.info("Ticket with id {} has updated successfully",
+                updatedTicket.getId());
+
+        return new TicketResponse(
+                "Update ticket status successfully",
+                "SUCCESS"
+        );
+    }
 }
 
 

@@ -36,7 +36,7 @@ public class BookController {
     }
 
     @DeleteMapping("/delete/{id}")
-    public void deleteBook(@PathVariable Long id){
-        bookService.deleteBook(id);
+    public ManageBookResponse deleteBook(@PathVariable Long id){
+        return bookService.deleteBook(id);
     }
 }

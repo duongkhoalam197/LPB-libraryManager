@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface BookRepository extends JpaRepository <Book, Long> {
-    List<Book> findByCategory_Id(Long categoryId);
+    List<Book> findByCategoryId(Long categoryId);
 }

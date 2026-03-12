@@ -8,5 +8,5 @@ public class ManageBookRequest {
     private String title;
     private String author;
     private Long price;
-    private Long category_id;
+    private Long categoryId;
 }
