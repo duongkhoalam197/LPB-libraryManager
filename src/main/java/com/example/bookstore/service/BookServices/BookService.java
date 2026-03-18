@@ -12,6 +12,7 @@ import com.example.bookstore.exeption.ReferencedException;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.CategoryRepository;
 import com.example.bookstore.service.BorrowServices.BookBorrowCheckService;
+import com.example.bookstore.service.BorrowServices.CheckIsBorrowed;
 import com.example.bookstore.validation.BookImportValidator;
 import com.example.bookstore.validation.ManageBookRequestValidator;
 import jakarta.transaction.Transactional;
@@ -30,9 +31,8 @@ public class BookService implements IBookService{
     private final CategoryRepository categoryRepository;
     private final IBookEntityMapper bookEntityMapper;
     private final IBookMapper bookMapper;
-    private final BookBorrowCheckService bookBorrowCheckService;
     private final List<ManageBookRequestValidator> manageBookRequestValidators;
-
+    private final CheckIsBorrowed bookBorrowCheckService;
 
 
     @Transactional
