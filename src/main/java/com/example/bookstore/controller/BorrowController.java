@@ -3,8 +3,6 @@ package com.example.bookstore.controller;
 import com.example.bookstore.dto.BorrowBookRequest;
 import com.example.bookstore.dto.TicketRequest;
 import com.example.bookstore.dto.TicketResponse;
-import com.example.bookstore.enums.TicketStatus;
-import com.example.bookstore.service.BookService;
 import com.example.bookstore.service.BorrowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
