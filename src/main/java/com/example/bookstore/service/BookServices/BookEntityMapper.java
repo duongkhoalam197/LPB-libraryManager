@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Service
 //Thao tác với entity
 public class BookEntityMapper {
-    public Book fromRequest(ManageBookRequest req, Category category) {
+    public Book importFromRequest(ManageBookRequest req, Category category) {
         Book b = new Book();
         b.setTitle(req.getTitle());
         b.setAuthor(req.getAuthor());

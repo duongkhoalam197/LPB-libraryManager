@@ -3,7 +3,7 @@ package com.example.bookstore.controller;
 import com.example.bookstore.dto.BorrowBookRequest;
 import com.example.bookstore.dto.TicketRequest;
 import com.example.bookstore.dto.TicketResponse;
-import com.example.bookstore.service.BorrowService;
+import com.example.bookstore.service.BorrowServices.BorrowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

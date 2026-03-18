@@ -5,14 +5,13 @@ import com.example.bookstore.dto.ManageBookRequest;
 import com.example.bookstore.dto.ManageBookResponse;
 import com.example.bookstore.entity.Book;
 import com.example.bookstore.entity.Category;
-import com.example.bookstore.enums.TicketStatus;
 import com.example.bookstore.exeption.BookDataException;
 import com.example.bookstore.exeption.BookNotFoundException;
 import com.example.bookstore.exeption.CategoryNotFoundException;
 import com.example.bookstore.exeption.ReferencedException;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.CategoryRepository;
-import com.example.bookstore.repository.TicketRepository;
+import com.example.bookstore.service.BorrowServices.BookBorrowCheckService;
 import com.example.bookstore.validation.BookImportValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +28,10 @@ public class BookService {
 
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
-    private final TicketRepository ticketRepository;
     private final BookEntityMapper bookEntityMapper;
     private final BookMapper bookMapper;
     private final BookImportValidator bookImportValidator;
+    private final BookBorrowCheckService bookBorrowCheckService;
 
 
 
@@ -43,7 +42,7 @@ public class BookService {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
 
-            Book book = bookEntityMapper.fromRequest(request, category); // ADDED
+            Book book = bookEntityMapper.importFromRequest(request, category); // ADDED
             Book savedBook = bookRepository.save(book);
             log.info("Import book successfully: {}", savedBook.getTitle());
 
@@ -98,10 +97,8 @@ public class BookService {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
 
-            book.setTitle(request.getTitle());
-            book.setAuthor(request.getAuthor());
-            book.setPrice(request.getPrice());
-            book.setCategory(category);
+            bookEntityMapper.updateFromRequest(book, request, category);
+
             Book updatedBook = bookRepository.save(book);
 
             return new ManageBookResponse(
@@ -121,8 +118,7 @@ public class BookService {
             Book book = bookRepository.findById(id)
                     .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
 
-            boolean isBorrowed = ticketRepository
-                    .existsByBookIdAndTicketStatus(id, TicketStatus.ACTIVE);
+            boolean isBorrowed = bookBorrowCheckService.isBorrowed(id);
 
             if (isBorrowed) {
                 throw new ReferencedException("Cannot delete book because it is currently borrowed");
