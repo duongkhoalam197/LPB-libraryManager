@@ -3,7 +3,7 @@ package com.example.bookstore.controller;
 import com.example.bookstore.dto.BookResponse;
 import com.example.bookstore.dto.ManageBookRequest;
 import com.example.bookstore.dto.ManageBookResponse;
-import com.example.bookstore.service.BookServices.BookService;
+import com.example.bookstore.service.BookServices.IBookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,7 +13,7 @@ import java.util.List;
 @RequestMapping("/api/books")
 @RequiredArgsConstructor
 public class BookController {
-    private final BookService bookService;
+    private final IBookService bookService;
 
     @GetMapping("/list")
     public List<BookResponse> findAllBooks(@RequestParam(required = false) Long category_id){

@@ -13,6 +13,7 @@ import com.example.bookstore.exeption.TicketNotFoundException;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.BorrowerRepository;
 import com.example.bookstore.repository.TicketRepository;
+import com.example.bookstore.service.BookServices.IBookService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,13 +26,14 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BorrowService {
+public class BorrowService implements IBorrowService {
     private final BookRepository bookRepository;
     private final TicketRepository ticketRepository;
     private final BorrowerRepository borrowerRepository;
 
 
     @Transactional
+    @Override
     public TicketResponse borrowBook(BorrowBookRequest borrowBookRequest) {
         try {
             Book book = bookRepository.findById(borrowBookRequest.getBook_id())
@@ -80,6 +82,7 @@ public class BorrowService {
         }
     }
 
+    @Override
     public TicketResponse cancelTicket(TicketRequest ticketRequest) {
         Ticket ticket = ticketRepository.findById(ticketRequest.getTicketId())
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found"));

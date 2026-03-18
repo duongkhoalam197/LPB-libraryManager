@@ -25,8 +25,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class BookService {
-
+public class BookService implements IBookService{
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
     private final IBookEntityMapper bookEntityMapper;
@@ -37,6 +36,7 @@ public class BookService {
 
 
     @Transactional
+    @Override
     public ManageBookResponse importBook(ManageBookRequest request) {
         try {
             manageBookRequestValidators.forEach(v -> v.validate(request));
@@ -61,6 +61,7 @@ public class BookService {
         }
     }
 
+    @Override
     public List<BookResponse> listBook(Long categoryId) {
         try {
             List<Book> books;
@@ -80,7 +81,7 @@ public class BookService {
         }
     }
 
-
+    @Override
     public BookResponse getBookById(Long id) {
         if (id == null) {
             throw new IllegalArgumentException("Book id must not be null");
@@ -91,6 +92,7 @@ public class BookService {
     }
 
     @Transactional
+    @Override
     public ManageBookResponse updateBook(Long id, ManageBookRequest request) {
         try {
             Book book = bookRepository.findById(id)
@@ -114,6 +116,7 @@ public class BookService {
     }
 
     @Transactional
+    @Override
     public ManageBookResponse deleteBook(Long id) {
         try {
             Book book = bookRepository.findById(id)

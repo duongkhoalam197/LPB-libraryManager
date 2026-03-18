@@ -3,7 +3,7 @@ package com.example.bookstore.controller;
 import com.example.bookstore.dto.BorrowBookRequest;
 import com.example.bookstore.dto.TicketRequest;
 import com.example.bookstore.dto.TicketResponse;
-import com.example.bookstore.service.BorrowServices.BorrowService;
+import com.example.bookstore.service.BorrowServices.IBorrowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/ticket")
 @RequiredArgsConstructor
 public class BorrowController {
-    private final BorrowService borrowService;
+    private final IBorrowService borrowService;
 
     @PostMapping("/borrow")
     public TicketResponse borrowResponse (@RequestBody BorrowBookRequest borrowBookRequest){
