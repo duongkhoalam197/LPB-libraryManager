@@ -6,7 +6,8 @@ import com.example.bookstore.entity.Category;
 import org.springframework.stereotype.Service;
 
 @Service
-public class BookMapper {
+public class BookMapper implements IBookMapper{
+    @Override
     public BookResponse toResponse(Book book) {
         Category c = book.getCategory();
         return new BookResponse(

@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
-public class BookImportValidator implements RequestValidator<ManageBookRequest> {
+public class BookImportValidator implements ManageBookRequestValidator {
 
     @Override
     public void validate(ManageBookRequest request) {

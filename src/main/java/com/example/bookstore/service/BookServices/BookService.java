@@ -13,6 +13,7 @@ import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.CategoryRepository;
 import com.example.bookstore.service.BorrowServices.BookBorrowCheckService;
 import com.example.bookstore.validation.BookImportValidator;
+import com.example.bookstore.validation.ManageBookRequestValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,17 +29,17 @@ public class BookService {
 
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
-    private final BookEntityMapper bookEntityMapper;
-    private final BookMapper bookMapper;
-    private final BookImportValidator bookImportValidator;
+    private final IBookEntityMapper bookEntityMapper;
+    private final IBookMapper bookMapper;
     private final BookBorrowCheckService bookBorrowCheckService;
+    private final List<ManageBookRequestValidator> manageBookRequestValidators;
 
 
 
     @Transactional
     public ManageBookResponse importBook(ManageBookRequest request) {
         try {
-            bookImportValidator.validate(request);
+            manageBookRequestValidators.forEach(v -> v.validate(request));
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
 
