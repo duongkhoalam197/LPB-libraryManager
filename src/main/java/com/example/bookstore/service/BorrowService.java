@@ -9,6 +9,7 @@ import com.example.bookstore.entity.Ticket;
 import com.example.bookstore.enums.TicketStatus;
 import com.example.bookstore.exeption.BookNotFoundException;
 import com.example.bookstore.exeption.BorrowerNotFoundException;
+import com.example.bookstore.exeption.TicketNotFoundException;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.BorrowerRepository;
 import com.example.bookstore.repository.TicketRepository;
@@ -81,7 +82,7 @@ public class BorrowService {
 
     public TicketResponse cancelTicket(TicketRequest ticketRequest) {
         Ticket ticket = ticketRepository.findById(ticketRequest.getTicketId())
-                .orElseThrow(() -> new BookNotFoundException("Ticket not found"));
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found"));
 
         if (ticket.getTicketStatus() == TicketStatus.RETURNED ||
                 ticket.getTicketStatus() == TicketStatus.CANCELED) {

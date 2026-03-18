@@ -14,7 +14,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             BookNotFoundException.class,
             CategoryNotFoundException.class,
-            BorrowerNotFoundException.class})
+            BorrowerNotFoundException.class,
+            TicketNotFoundException.class})
     public ResponseEntity<String> handleNotFoundException(RuntimeException ex) {
         log.info("Resource not found: {}", ex.getMessage());
         return ResponseEntity

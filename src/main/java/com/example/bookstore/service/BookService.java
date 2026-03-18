@@ -107,7 +107,6 @@ public class BookService {
 
     private BookResponse mapToResponse(Book book) {
         Category category = book.getCategory();
-
         return new BookResponse(
                 book.getId(),
                 book.getTitle(),
