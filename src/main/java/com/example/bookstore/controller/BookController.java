@@ -16,8 +16,8 @@ public class BookController {
     private final IBookService bookService;
 
     @GetMapping("/list")
-    public List<BookResponse> findAllBooks(@RequestParam(required = false) Long category_id){
-        return bookService.listBook(category_id);
+    public List<BookResponse> findAllBooks(@RequestParam(required = false) Long categoryId){
+        return bookService.listBook(categoryId);
     }
 
     @PostMapping("/import")
