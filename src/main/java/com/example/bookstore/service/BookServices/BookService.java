@@ -3,17 +3,13 @@ package com.example.bookstore.service.BookServices;
 import com.example.bookstore.dto.BookResponse;
 import com.example.bookstore.dto.ManageBookRequest;
 import com.example.bookstore.dto.ManageBookResponse;
+import com.example.bookstore.dto.ManageBookResult;
 import com.example.bookstore.entity.Book;
 import com.example.bookstore.entity.Category;
-import com.example.bookstore.exeption.BookDataException;
-import com.example.bookstore.exeption.BookNotFoundException;
-import com.example.bookstore.exeption.CategoryNotFoundException;
-import com.example.bookstore.exeption.ReferencedException;
+import com.example.bookstore.enums.BookErrorCode;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.CategoryRepository;
-import com.example.bookstore.service.BorrowServices.BookBorrowCheckService;
 import com.example.bookstore.service.BorrowServices.CheckIsBorrowed;
-import com.example.bookstore.validation.BookImportValidator;
 import com.example.bookstore.validation.ManageBookRequestValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -37,48 +34,64 @@ public class BookService implements IBookService{
 
     @Transactional
     @Override
-    public ManageBookResponse importBook(ManageBookRequest request) {
+    public ManageBookResult importBook(ManageBookRequest request) {
+        manageBookRequestValidators.forEach(v -> v.validate(request));
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElse(null);
+        if (category == null) {
+            return new ManageBookResult(
+                    false,
+                    BookErrorCode.CATEGORY_NOT_FOUND,
+                    "Category not found with id: " + request.getCategoryId(),
+                    null
+            );
+        }
         try {
-            manageBookRequestValidators.forEach(v -> v.validate(request));
-            Category category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
-
-            Book book = bookEntityMapper.importFromRequest(request, category); // ADDED
+            Book book = bookEntityMapper.importFromRequest(request, category);
             Book savedBook = bookRepository.save(book);
-            log.info("Import book successfully: {}", savedBook.getTitle());
 
-            return new ManageBookResponse("SUCCESS", "Import book successfully", savedBook.getTitle());
+            ManageBookResponse payload = new ManageBookResponse(savedBook.getTitle());
+            return new ManageBookResult(
+                    true,
+                    null,
+                    null,
+                    payload
+            );
         } catch (DataIntegrityViolationException e) {
             log.error("Data integrity violation when importing book", e);
-            throw new BookDataException("Cannot import book due to duplicate data or constraint violation");
-
-        } catch (CategoryNotFoundException e) {
-            throw e; //
-
+            return new ManageBookResult(
+                    false,
+                    BookErrorCode.BOOK_DUPLICATED,
+                    "Book with this information already exists",
+                    null
+            );
         } catch (Exception e) {
             log.error("Unexpected error when importing book", e);
             throw new RuntimeException("Failed to import book: " + e.getMessage(), e);
         }
     }
 
+
+
     @Override
     public List<BookResponse> listBook(Long categoryId) {
-        try {
-            List<Book> books;
-            if (categoryId == null) {
-                books = bookRepository.findAll();
-            } else {
-                Category category = categoryRepository.findById(categoryId)
-                        .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + categoryId));
-                books = bookRepository.findByCategoryId(category.getId());
+        List<Book> books;
+
+        if (categoryId == null) {
+            books = bookRepository.findAll();
+        } else {
+            Category category = categoryRepository.findById(categoryId)
+                    .orElse(null);
+            if (category == null) {
+                log.info("Category not found with id: {}, returning empty book list", categoryId);
+                return List.of(); // Trả list rỗng, không ném exception
             }
-            return books.stream()
-                    .map(bookMapper::toResponse)
-                    .toList();
-        } catch (Exception e) {
-            log.error("Error while listing books with categoryId: {}", categoryId, e);
-            throw new RuntimeException("Failed to list books: " + e.getMessage(), e);
+            books = bookRepository.findByCategoryId(category.getId());
         }
+
+        return books.stream()
+                .map(bookMapper::toResponse)
+                .toList();
     }
 
     @Override
@@ -87,58 +100,106 @@ public class BookService implements IBookService{
             throw new IllegalArgumentException("Book id must not be null");
         }
         Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Book not found with id: " + id));
         return bookMapper.toResponse(book);
     }
 
     @Transactional
     @Override
-    public ManageBookResponse updateBook(Long id, ManageBookRequest request) {
+    public ManageBookResult updateBook(Long id, ManageBookRequest request) {
         try {
             Book book = bookRepository.findById(id)
-                    .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
+                    .orElse(null);
+            if (book == null) {
+                return new ManageBookResult(
+                        false,
+                        BookErrorCode.BOOK_NOT_FOUND,
+                        "Book not found with id: " + id,
+                        null
+                );
+            }
+
             Category category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
+                    .orElse(null);
+            if (category == null) {
+                return new ManageBookResult(
+                        false,
+                        BookErrorCode.CATEGORY_NOT_FOUND,
+                        "Category not found with id: " + request.getCategoryId(),
+                        null
+                );
+            }
 
             bookEntityMapper.updateFromRequest(book, request, category);
-
             Book updatedBook = bookRepository.save(book);
 
-            return new ManageBookResponse(
-                    "SUCCESS",
-                    "Update book successfully",
-                    updatedBook.getTitle()
+            ManageBookResponse payload = new ManageBookResponse(updatedBook.getTitle());
+            return new ManageBookResult(
+                    true,
+                    null,
+                    null,
+                    payload
             );
-
         } catch (DataIntegrityViolationException e) {
-            throw new BookDataException("Data constraint violation");
+            log.error("Data constraint violation when updating book", e);
+            return new ManageBookResult(
+                    false,
+                    BookErrorCode.BOOK_DUPLICATED,
+                    "Book with this information already exists",
+                    null
+            );
+        } catch (Exception e) {
+            log.error("Unexpected error when updating book", e);
+            throw new RuntimeException("Failed to update book: " + e.getMessage(), e);
         }
     }
 
     @Transactional
     @Override
-    public ManageBookResponse deleteBook(Long id) {
+    public ManageBookResult deleteBook(Long id) {
         try {
             Book book = bookRepository.findById(id)
-                    .orElseThrow(() -> new BookNotFoundException("Book not found with id: " + id));
+                    .orElse(null);
+            if (book == null) {
+                return new ManageBookResult(
+                        false,
+                        BookErrorCode.BOOK_NOT_FOUND,
+                        "Book not found with id: " + id,
+                        null
+                );
+            }
 
             boolean isBorrowed = bookBorrowCheckService.isBorrowed(id);
-
             if (isBorrowed) {
-                throw new ReferencedException("Cannot delete book because it is currently borrowed");
+                return new ManageBookResult(
+                        false,
+                        BookErrorCode.BOOK_BORROWED,
+                        "Cannot delete book because it is currently borrowed",
+                        null
+                );
             }
 
             bookRepository.delete(book);
 
-            return new ManageBookResponse(
-                    "SUCCESS",
-                    "Delete book successfully",
-                    book.getTitle()
+            ManageBookResponse payload = new ManageBookResponse(book.getTitle());
+            return new ManageBookResult(
+                    true,
+                    null,
+                    null,
+                    payload
             );
-
         } catch (DataIntegrityViolationException e) {
-            throw new ReferencedException("Cannot delete book because it is being referenced by other records");
+            log.error("Data integrity violation when deleting book", e);
+            return new ManageBookResult(
+                    false,
+                    BookErrorCode.BOOK_REFERENCED,
+                    "Cannot delete book because it is being referenced by other records",
+                    null
+            );
+        } catch (Exception e) {
+            log.error("Unexpected error when deleting book", e);
+            throw new RuntimeException("Failed to delete book: " + e.getMessage(), e);
         }
     }
-
+    
 }
