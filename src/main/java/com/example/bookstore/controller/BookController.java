@@ -156,12 +156,10 @@ public class BookController {
         responseBody.setCode("BOOK_LIST");
         responseBody.setMessage("List books successfully");
         responseBody.setData(books);
-
-        // Có thể luôn trả 200 OK, kể cả khi list rỗng
         return ResponseEntity.ok(responseBody);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<APIResponse<BookResponse>> bookResponse(@PathVariable Long id) {
         APIResponse<BookResponse> body = new APIResponse<>();
 
@@ -188,5 +186,6 @@ public class BookController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
         }
     }
+
 
 }
