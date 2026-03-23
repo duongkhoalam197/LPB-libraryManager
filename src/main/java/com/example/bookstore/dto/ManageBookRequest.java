@@ -7,6 +7,6 @@ import lombok.Data;
 public class ManageBookRequest {
     private String title;
     private String author;
-    private Long price;
+    private Double price;
     private Long categoryId;
 }

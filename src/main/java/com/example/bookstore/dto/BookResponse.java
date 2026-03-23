@@ -9,7 +9,7 @@ public class BookResponse {
     private Long id;
     private String title;
     private String author;
-    private Long price;
+    private Double price;
 
     private Long categoryId;
     private String categoryName;

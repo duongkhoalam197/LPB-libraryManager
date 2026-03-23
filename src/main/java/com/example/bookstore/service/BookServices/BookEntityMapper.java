@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 @Service
 //Thao tác với entity
 public class BookEntityMapper implements IBookEntityMapper {
+    @Override
     public Book importFromRequest(ManageBookRequest req, Category category) {
         Book b = new Book();
         b.setTitle(req.getTitle());
@@ -18,10 +19,25 @@ public class BookEntityMapper implements IBookEntityMapper {
         return b;
     }
 
-    public void updateFromRequest(Book book, ManageBookRequest req, Category category) {
-        book.setTitle(req.getTitle());
-        book.setAuthor(req.getAuthor());
-        book.setPrice(req.getPrice());
-        book.setCategory(category);
+    @Override
+    public void updateFromRequest(Book book, ManageBookRequest request, Category category) {
+        // Cần kiểu logic như sau:
+
+        if (request.getTitle() != null) {
+            book.setTitle(request.getTitle());
+        }
+
+        if (request.getAuthor() != null) {
+            book.setAuthor(request.getAuthor());
+        }
+
+        if (request.getPrice() != null) {
+            book.setPrice(request.getPrice());
+        }
+
+        if (request.getCategoryId() != null) {
+            // category đã được lấy từ DB tương ứng id mới
+            book.setCategory(category);
+        }
     }
 }

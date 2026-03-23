@@ -53,7 +53,6 @@ public class BookController {
         }
     }
 
-
     @PutMapping("/update/{id}")
     public ResponseEntity<APIResponse<ManageBookResponse>> updateBook(
             @PathVariable Long id,

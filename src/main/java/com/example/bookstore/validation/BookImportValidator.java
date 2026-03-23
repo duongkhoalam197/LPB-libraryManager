@@ -4,7 +4,7 @@ import com.example.bookstore.dto.ManageBookRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-@Component
+@Component("bookImportValidator")
 public class BookImportValidator implements ManageBookRequestValidator {
 
     @Override

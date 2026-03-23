@@ -23,7 +23,7 @@ public class Book {
     private String author;
 
     @Column(name = "price")
-    private Long price;
+    private Double price;
 
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)

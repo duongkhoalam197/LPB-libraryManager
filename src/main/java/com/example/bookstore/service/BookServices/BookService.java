@@ -10,10 +10,12 @@ import com.example.bookstore.enums.BookErrorCode;
 import com.example.bookstore.repository.BookRepository;
 import com.example.bookstore.repository.CategoryRepository;
 import com.example.bookstore.service.BorrowServices.CheckIsBorrowed;
+import com.example.bookstore.validation.BookDeleteValidator;
 import com.example.bookstore.validation.ManageBookRequestValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -28,14 +30,19 @@ public class BookService implements IBookService{
     private final CategoryRepository categoryRepository;
     private final IBookEntityMapper bookEntityMapper;
     private final IBookMapper bookMapper;
-    private final List<ManageBookRequestValidator> manageBookRequestValidators;
+    @Qualifier("bookImportValidator")
+    private final ManageBookRequestValidator bookImportValidator;
+
+    @Qualifier("bookUpdateValidator")
+    private final ManageBookRequestValidator bookUpdateValidator;
     private final CheckIsBorrowed bookBorrowCheckService;
+    private final List<BookDeleteValidator> bookDeleteValidators;
 
 
     @Transactional
     @Override
     public ManageBookResult importBook(ManageBookRequest request) {
-        manageBookRequestValidators.forEach(v -> v.validate(request));
+        bookImportValidator.validate(request);
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElse(null);
         if (category == null) {
@@ -50,7 +57,11 @@ public class BookService implements IBookService{
             Book book = bookEntityMapper.importFromRequest(request, category);
             Book savedBook = bookRepository.save(book);
 
-            ManageBookResponse payload = new ManageBookResponse(savedBook.getTitle());
+            ManageBookResponse payload = new ManageBookResponse
+                    (savedBook.getTitle(),
+                    savedBook.getAuthor(),
+                    savedBook.getPrice(),
+                    savedBook.getCategory().getId());
             return new ManageBookResult(
                     true,
                     null,
@@ -107,9 +118,9 @@ public class BookService implements IBookService{
     @Transactional
     @Override
     public ManageBookResult updateBook(Long id, ManageBookRequest request) {
+        bookUpdateValidator.validate(request);
         try {
-            Book book = bookRepository.findById(id)
-                    .orElse(null);
+            Book book = bookRepository.findById(id).orElse(null);
             if (book == null) {
                 return new ManageBookResult(
                         false,
@@ -119,21 +130,32 @@ public class BookService implements IBookService{
                 );
             }
 
-            Category category = categoryRepository.findById(request.getCategoryId())
-                    .orElse(null);
-            if (category == null) {
-                return new ManageBookResult(
-                        false,
-                        BookErrorCode.CATEGORY_NOT_FOUND,
-                        "Category not found with id: " + request.getCategoryId(),
-                        null
-                );
+            // Chỉ load category mới nếu client gửi categoryId
+            Category category = null;
+            if (request.getCategoryId() != null) {
+                category = categoryRepository.findById(request.getCategoryId())
+                        .orElse(null);
+
+                if (category == null) {
+                    return new ManageBookResult(
+                            false,
+                            BookErrorCode.CATEGORY_NOT_FOUND,
+                            "Category not found with id: " + request.getCategoryId(),
+                            null
+                    );
+                }
             }
 
+            // Mapper sẽ chỉ update field nào != null
             bookEntityMapper.updateFromRequest(book, request, category);
             Book updatedBook = bookRepository.save(book);
 
-            ManageBookResponse payload = new ManageBookResponse(updatedBook.getTitle());
+            ManageBookResponse payload = new ManageBookResponse(
+                    updatedBook.getTitle(),
+                    updatedBook.getAuthor(),
+                    updatedBook.getPrice(),
+                    updatedBook.getCategory().getId()
+            );
             return new ManageBookResult(
                     true,
                     null,
@@ -158,6 +180,7 @@ public class BookService implements IBookService{
     @Override
     public ManageBookResult deleteBook(Long id) {
         try {
+            bookDeleteValidators.forEach(v -> v.validate(id));
             Book book = bookRepository.findById(id)
                     .orElse(null);
             if (book == null) {
@@ -181,7 +204,11 @@ public class BookService implements IBookService{
 
             bookRepository.delete(book);
 
-            ManageBookResponse payload = new ManageBookResponse(book.getTitle());
+            ManageBookResponse payload = new ManageBookResponse
+                            (book.getTitle(),
+                            book.getAuthor(),
+                            book.getPrice(),
+                            book.getCategory().getId());
             return new ManageBookResult(
                     true,
                     null,
@@ -201,5 +228,5 @@ public class BookService implements IBookService{
             throw new RuntimeException("Failed to delete book: " + e.getMessage(), e);
         }
     }
-    
+
 }
